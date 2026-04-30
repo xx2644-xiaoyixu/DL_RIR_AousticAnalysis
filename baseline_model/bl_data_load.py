@@ -6,9 +6,15 @@ import librosa
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
-# set the path of dataset and labels
-FEATURE_DIR = r"C:\data\ir_features"
-LABEL_CSV = r"C:\data\ir_labels.csv"
+# define the path of data and label
+DATASET_ROOT = r"C:\Users\14362\Desktop\DL\Assignment\Group Project\DL_RIR_AousticAnalysis\dataset"
+AUDIO_DIR = os.path.join(DATASET_ROOT, "audio")
+LABEL_DIR = os.path.join(DATASET_ROOT, "labels")
+
+TRAIN_CSV = os.path.join(LABEL_DIR, "train_labels_classification.csv")
+VAL_CSV = os.path.join(LABEL_DIR, "validation_labels_classification.csv")
+TEST_CSV = os.path.join(LABEL_DIR, "test_labels_classification.csv")
+
 
 def waveform_to_logmel(
     x,
@@ -25,7 +31,6 @@ def waveform_to_logmel(
     Output:
         feature: shape (n_mels, T, 2)
     """
-
     if x.ndim != 2 or x.shape[0] != 2:
         raise ValueError(f"Expected shape (2, samples), got {x.shape}")
 
@@ -56,59 +61,71 @@ def waveform_to_logmel(
     right_logmel = librosa.power_to_db(right_mel, ref=1.0)
 
     feature = np.stack([left_logmel, right_logmel], axis=-1)
-    # feature: (n_mels, T, 2)
-
     return feature.astype(np.float32)
 
-def load_one_sample(filename, feature_dir=FEATURE_DIR):
-    path = os.path.join(feature_dir, filename)
 
-    x = np.load(path).astype(np.float32)
-    # x: (2, samples)
+def load_one_sample(row, audio_dir=AUDIO_DIR, sr=44100):
+    split = row["split"]
+    class_name = f"class_{int(row['DRR_class'])}"
 
-    if x.ndim != 2 or x.shape[0] != 2:
-        raise ValueError(f"{filename} should have shape (2, samples), but got {x.shape}")
+    left_path = os.path.join(audio_dir, split, class_name, row["left_file"])
+    right_path = os.path.join(audio_dir, split, class_name, row["right_file"])
 
-    feature = waveform_to_logmel(x)
-    # feature: (n_mels, T, 2)
+    if not os.path.exists(left_path):
+        raise FileNotFoundError(left_path)
+    if not os.path.exists(right_path):
+        raise FileNotFoundError(right_path)
+
+    left, _ = librosa.load(left_path, sr=sr, mono=True)
+    right, _ = librosa.load(right_path, sr=sr, mono=True)
+
+    min_len = min(len(left), len(right))
+    left = left[:min_len]
+    right = right[:min_len]
+
+    x = np.stack([left, right], axis=0)
+    feature = waveform_to_logmel(x, sr=sr)
 
     return feature
 
-def load_dataset(FEATURE_DIR = r"C:\data\ir_features", LABEL_CSV = r"C:\data\ir_labels.csv"):
-    df = pd.read_csv(LABEL_CSV)
+
+def load_dataset(label_csv, audio_dir=AUDIO_DIR, save_prefix=None):
+    df = pd.read_csv(label_csv)
 
     X = []
     Y = []
 
     for _, row in df.iterrows():
-        filename = row["filename"]
-
-        x = load_one_sample(filename, FEATURE_DIR)
+        x = load_one_sample(row, audio_dir)
 
         y = np.array(
-            [row["DRR"], row["C80"], row["RT60"]],
-            dtype=np.float32,
+            [
+                row["DRR_class"],
+                row["RT60_class"],
+                row["C80_class"],
+            ],
+            dtype=np.int64,
         )
 
         X.append(x)
         Y.append(y)
 
-    # logmels shape = (N, n_mels, T, 2)
     logmels = np.stack(X, axis=0)
-    # labels shape = (N, 3)
     labels = np.stack(Y, axis=0)
 
-    np.save("X_logmel.npy", logmels)
-    np.save("Y_labels.npy", labels)
+    if save_prefix is not None:
+        np.save(f"{save_prefix}_X_logmel.npy", logmels)
+        np.save(f"{save_prefix}_Y_labels.npy", labels)
 
     return logmels, labels
+
 
 def make_pytorch_loader(logmels, labels, batch_size=16, shuffle=True):
     """
     logmels: (N, F, T, 2)
-    labels:  (N, 3)
+    labels:  (N, 3), classification labels:
+             [DRR_class, RT60_class, C80_class]
     """
-
     logmels_t = np.transpose(logmels, (0, 3, 1, 2))
     # (N, F, T, 2) -> (N, 2, F, T)
 
@@ -124,5 +141,17 @@ def make_pytorch_loader(logmels, labels, batch_size=16, shuffle=True):
     )
 
     return loader
+
+
+def load_train_val_test(batch_size=16):
+    train_X, train_Y = load_dataset(TRAIN_CSV, save_prefix="train")
+    val_X, val_Y = load_dataset(VAL_CSV, save_prefix="val")
+    test_X, test_Y = load_dataset(TEST_CSV, save_prefix="test")
+
+    train_loader = make_pytorch_loader(train_X, train_Y, batch_size=batch_size, shuffle=True)
+    val_loader = make_pytorch_loader(val_X, val_Y, batch_size=batch_size, shuffle=False)
+    test_loader = make_pytorch_loader(test_X, test_Y, batch_size=batch_size, shuffle=False)
+
+    return train_loader, val_loader, test_loader
 
 
