@@ -32,6 +32,11 @@ MANIFEST
 *.manifest
 *.spec
 
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
