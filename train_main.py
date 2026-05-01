@@ -96,6 +96,11 @@ def main():
     print(f"Overall Test Accuracy: {test_acc*100:.2f}%")
     print(f"=========================================")
 
+    print(">>> Step 5.5: Saving the best model state_dict")
+    model_save_path = "bewo_model_best.pth"
+    torch.save(trained_model.state_dict(), model_save_path)
+    print(f"✅ Saved trained model to {model_save_path}")
+
     print(">>> Step 6: Extracting 512D Embeddings for Member 4 Analysis")
     trained_model.eval()
     
