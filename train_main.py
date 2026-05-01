@@ -98,29 +98,35 @@ def main():
 
     print(">>> Step 6: Extracting 512D Embeddings for Member 4 Analysis")
     trained_model.eval()
-    all_embeddings = []
-    all_labels = []
-    with torch.no_grad():
-        for x, y in test_loader:
-            x = x.to(device)
-            # Pass through the BEWO backbone natively
-            # Since trained_model is BEWOWrapper, trained_model.conformer is the BEWOBackbone
-            embeddings = trained_model.conformer(x)
-            all_embeddings.append(embeddings.cpu().numpy())
-            all_labels.append(y.numpy())
-            
+    
+    splits = [
+        ("train", train_loader),
+        ("val", val_loader),
+        ("test", test_loader)
+    ]
+    
     import numpy as np
-    final_embeddings = np.concatenate(all_embeddings, axis=0)
-    final_labels = np.concatenate(all_labels, axis=0)
     
-    emb_path = "bewo_embeddings_test.npy"
-    lbl_path = "bewo_labels_test.npy"
-    np.save(emb_path, final_embeddings)
-    np.save(lbl_path, final_labels)
-    
-    print(f"✅ Successfully extracted and saved {len(final_embeddings)} embeddings (Dim: {final_embeddings.shape[1]})")
-    print(f"📁 Embeddings path: {emb_path}")
-    print(f"📁 Labels path: {lbl_path}")
+    for split_name, loader in splits:
+        all_embeddings = []
+        all_labels = []
+        with torch.no_grad():
+            for x, y in loader:
+                x = x.to(device)
+                # Pass through the BEWO backbone natively
+                embeddings = trained_model.conformer(x)
+                all_embeddings.append(embeddings.cpu().numpy())
+                all_labels.append(y.numpy())
+                
+        final_embeddings = np.concatenate(all_embeddings, axis=0)
+        final_labels = np.concatenate(all_labels, axis=0)
+        
+        emb_path = f"bewo_embeddings_{split_name}.npy"
+        lbl_path = f"bewo_labels_{split_name}.npy"
+        np.save(emb_path, final_embeddings)
+        np.save(lbl_path, final_labels)
+        
+        print(f"✅ Successfully extracted and saved {len(final_embeddings)} embeddings for '{split_name}' (Dim: {final_embeddings.shape[1]})")
 
 if __name__ == "__main__":
     main()
