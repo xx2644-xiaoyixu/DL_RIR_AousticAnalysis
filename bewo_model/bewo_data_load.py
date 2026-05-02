@@ -55,8 +55,14 @@ def extract_and_save_dataset(label_csv, split_name, audio_dir, output_dir):
         feature = audio_to_logmel(left_path, right_path)
         X.append(feature)
         
-        # Capture the targets
-        Y.append([int(row["DRR_class"]), int(row["C80_class"]), int(row["RT60_class"])])
+        # Capture the targets (now 5 classes due to upstream changes)
+        Y.append([
+            int(row["DRR_class"]), 
+            int(row["C80_class"]), 
+            int(row["RT60_class"]),
+            int(row["ILD_class"]),
+            int(row["ITD_class"])
+        ])
 
     X_np = np.stack(X, axis=0)
     Y_np = np.array(Y, dtype=np.int64)

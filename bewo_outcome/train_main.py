@@ -1,4 +1,8 @@
 import os
+import sys
+# Add parent directory to path so it can find bewo_model when run from inside bewo_outcome
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import torch
 import torch.nn as nn
 from bewo_model.bewo_data_load import extract_and_save_dataset, load_bewo_arrays, make_pytorch_loader
@@ -46,18 +50,40 @@ class BEWOWrapper(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, num_classes)
         )
+        self.ild_head = nn.Sequential(
+            nn.LayerNorm(embed_dim),
+            nn.Linear(embed_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, num_classes)
+        )
+        self.itd_head = nn.Sequential(
+            nn.LayerNorm(embed_dim),
+            nn.Linear(embed_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, num_classes)
+        )
+
+        self.heads = nn.ModuleList([
+            self.drr_head, 
+            self.c80_head, 
+            self.rt60_head, 
+            self.ild_head, 
+            self.itd_head
+        ])
 
     def forward(self, x):
         # bewo_core.py returns the pooled embedding directly
         pooled = self.conformer(x)
-        return self.drr_head(pooled), self.c80_head(pooled), self.rt60_head(pooled)
+        return self.drr_head(pooled), self.c80_head(pooled), self.rt60_head(pooled), self.ild_head(pooled), self.itd_head(pooled)
 
 def main():
     AUDIO_DIR = "./dataset/audio"
     BEWO_FEAT_DIR = "./bewo_model/bewo_features"
-    TRAIN_CSV = "./dataset/labels/train_labels_classification.csv"
-    VAL_CSV = "./dataset/labels/validation_labels_classification.csv"
-    TEST_CSV = "./dataset/labels/test_labels_classification.csv"
+    TRAIN_CSV = "./dataset/labels/train_labels_classification_with_ild_itd.csv"
+    VAL_CSV = "./dataset/labels/validation_labels_classification_with_ild_itd.csv"
+    TEST_CSV = "./dataset/labels/test_labels_classification_with_ild_itd.csv"
     
     print(">>> Step 1: BEWO Preprocessing audio to image (Log-Mel)")
     # Extract features natively (or skip if already extracted to avoid redundancy)
@@ -89,7 +115,10 @@ def main():
     print(">>> Step 5: Test Evaluation & Prediction Output")
     # Reusing Member 2's evaluate_classifier
     criterion = nn.CrossEntropyLoss()
-    test_loss, test_acc = evaluate_classifier(trained_model, test_loader, criterion, device)
+    test_metrics = evaluate_classifier(trained_model, test_loader, criterion, device)
+    test_loss = test_metrics["loss"]
+    test_acc = test_metrics["acc"]
+    
     print(f"=========================================")
     print(f"BEWO Final Test Predictions Results:")
     print(f"Overall Test Loss: {test_loss:.4f}")
@@ -97,7 +126,7 @@ def main():
     print(f"=========================================")
 
     print(">>> Step 5.5: Saving the best model state_dict")
-    model_save_path = "bewo_model_best.pth"
+    model_save_path = "bewo_outcome/bewo_model_best.pth"
     torch.save(trained_model.state_dict(), model_save_path)
     print(f"✅ Saved trained model to {model_save_path}")
 
@@ -126,8 +155,8 @@ def main():
         final_embeddings = np.concatenate(all_embeddings, axis=0)
         final_labels = np.concatenate(all_labels, axis=0)
         
-        emb_path = f"bewo_embeddings_{split_name}.npy"
-        lbl_path = f"bewo_labels_{split_name}.npy"
+        emb_path = f"bewo_outcome/bewo_embeddings_{split_name}.npy"
+        lbl_path = f"bewo_outcome/bewo_labels_{split_name}.npy"
         np.save(emb_path, final_embeddings)
         np.save(lbl_path, final_labels)
         
