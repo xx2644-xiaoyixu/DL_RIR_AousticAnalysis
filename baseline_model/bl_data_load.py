@@ -65,7 +65,7 @@ def load_one_sample(row, audio_dir, sr=44100):
     return waveform_to_logmel(x, sr=sr)
 
 # define the path that saves the logmels and labels for each group of the dataset
-SAVE_DIR = r"C:\Users\14362\Desktop\DL\Assignment\Group Project\DL_RIR_AousticAnalysis\baseline_model1\bl_dataset_npy"
+SAVE_DIR = r"C:\Users\14362\Desktop\DL\Assignment\Group Project\DL_RIR_AousticAnalysis\baseline_model\bl_dataset_npy"
 
 LABEL_COLUMNS = ["DRR_class", "C80_class", "RT60_class", "ILD_class", "ITD_class"]
 

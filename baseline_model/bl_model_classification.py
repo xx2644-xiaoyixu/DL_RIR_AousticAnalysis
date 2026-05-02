@@ -1,8 +1,12 @@
-﻿import torch
+import os
+import json
+import torch
 import torch.nn as nn
 from bl_model_CNN import FrontCNN
 from bl_model_core import Conformer
 import copy
+import numpy as np
+import pandas as pd
 
 
 LABEL_NAMES = ["drr", "c80", "rt60", "ild", "itd"]
@@ -104,6 +108,7 @@ def _compute_multitask_metrics(logits, y, criterion):
         losses.append(label_loss)
         loss_values[label_name] = label_loss.item()
 
+        # classify
         label_pred = torch.argmax(label_logits, dim=1)
         label_correct = (label_pred == label_y).sum().item()
         correct[label_name] = label_correct
@@ -132,6 +137,7 @@ def evaluate_classifier(model, val_loader, criterion, device):
             y = y.to(device).long()
             batch_size = x.size(0)
 
+            # predicts the logits
             logits = model(x)
             loss, loss_values, correct, batch_correct, _ = _compute_multitask_metrics(
                 logits,
@@ -301,6 +307,10 @@ def train_frontCNN_probes(
 
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
+        model.best_epoch = best_epoch
+        model.best_val_loss = best_val_loss
+        model.best_val_acc = best_val_acc
+        model.best_val_metrics = best_val_metrics
 
         print(
             f"Loaded best model from epoch {best_epoch} | "
@@ -322,6 +332,72 @@ def train_frontCNN_probes(
 
     return model
 
+def test_result(best_baseline_model, test_loader):
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    criterion = nn.CrossEntropyLoss()
+    
+    best_baseline_model.to(device)
+    best_baseline_model.eval()
+    
+    test_metrics = evaluate_classifier(
+        best_baseline_model,
+        test_loader,
+        criterion,
+        device,
+    )
+    
+    print(f"Test loss: {test_metrics['loss']:.2f} | Test acc: {test_metrics['acc']:.2f}")
+    
+    for label_name in LABEL_NAMES:
+        print(
+            f"{label_name.upper()} test loss/acc: "
+            f"{test_metrics[f'{label_name}_loss']:.2f}/"
+            f"{test_metrics[f'{label_name}_acc']:.2f}"
+        )
+
+
+def extract_embeddings(model, data_loader, device=None):
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    model.to(device)
+    model.eval()
+
+    all_embeddings = []
+    all_labels = []
+
+    with torch.no_grad():
+        for x, y in data_loader:
+            x = x.to(device)
+
+            # 1. CNN frontend
+            x = model.front_cnn(x)
+            # x shape: (B, T, 128)
+
+            B, T, D = x.shape
+            lengths = torch.full(
+                (B,),
+                T,
+                dtype=torch.long,
+                device=x.device,
+            )
+
+            # 2. Conformer output
+            conformer_out, lengths = model.conformer(x, lengths)
+            # conformer_out shape: (B, T, 128)
+
+            # 3. Same pooling as classifier forward()
+            embedding = conformer_out.mean(dim=1)
+            # embedding shape: (B, 128)
+
+            all_embeddings.append(embedding.cpu())
+            all_labels.append(y.cpu())
+
+    all_embeddings = torch.cat(all_embeddings, dim=0).numpy()
+    all_labels = torch.cat(all_labels, dim=0).numpy()
+
+    return all_embeddings, all_labels
 
 
 
