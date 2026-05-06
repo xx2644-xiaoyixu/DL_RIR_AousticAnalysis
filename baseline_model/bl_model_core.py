@@ -40,16 +40,19 @@ class _ConvolutionModule(torch.nn.Module):
         if (depthwise_kernel_size - 1) % 2 != 0:
             raise ValueError("depthwise_kernel_size must be odd to achieve 'SAME' padding.")
         self.layer_norm = torch.nn.LayerNorm(input_dim)
+        # Point-wise conv.不看相邻时间帧，只在每一个时间点 𝑡 上，对 channel做线性组合。(B, C, T) -> (B, 2C, T)
         self.sequential = torch.nn.Sequential(
             torch.nn.Conv1d(
                 input_dim,
                 2 * num_channels,
-                1,
+                1, # kernel_size
                 stride=1,
                 padding=0,
                 bias=bias,
             ),
+            # Gated Linear Unit，控制哪些通道/特征通过。[B, 2C, T] -> [B, C, T]
             torch.nn.GLU(dim=1),
+            # Depth-wise conv.提取局部时间上下文，每个 channel 单独做卷积。[B, C, T] -> [B, C, T]
             torch.nn.Conv1d(
                 num_channels,
                 num_channels,
@@ -62,7 +65,8 @@ class _ConvolutionModule(torch.nn.Module):
             torch.nn.GroupNorm(num_groups=1, num_channels=num_channels)
             if use_group_norm
             else torch.nn.BatchNorm1d(num_channels),
-            torch.nn.SiLU(),
+            torch.nn.GELU(),
+            # point-wise conv, feature mixing
             torch.nn.Conv1d(
                 num_channels,
                 input_dim,
@@ -89,7 +93,7 @@ class _ConvolutionModule(torch.nn.Module):
 
 
 class _FeedForwardModule(torch.nn.Module):
-    r"""Positionwise feed forward layer.
+    r"""Positionwise feed forward layer. (MLP
 
     Args:
         input_dim (int): input dimension.
@@ -102,7 +106,7 @@ class _FeedForwardModule(torch.nn.Module):
         self.sequential = torch.nn.Sequential(
             torch.nn.LayerNorm(input_dim),
             torch.nn.Linear(input_dim, hidden_dim, bias=True),
-            torch.nn.SiLU(),
+            torch.nn.GELU(),
             torch.nn.Dropout(dropout),
             torch.nn.Linear(hidden_dim, input_dim, bias=True),
             torch.nn.Dropout(dropout),
@@ -248,7 +252,7 @@ class Conformer(torch.nn.Module):
         input_dim: int,
         num_heads: int,
         ffn_dim: int,
-        num_layers: int,
+        num_layers: int, # how many conformer blocks
         depthwise_conv_kernel_size: int,
         dropout: float = 0.0,
         use_group_norm: bool = False,

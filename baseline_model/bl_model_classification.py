@@ -48,7 +48,7 @@ class RIRConformerClassifier(nn.Module):
             # input shape: (B, D)
             nn.LayerNorm(input_dim),
             nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
+            torch.nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, num_classes), 
             # output is (batch, logits), shape is (B, num_classes)    
