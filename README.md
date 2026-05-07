@@ -111,3 +111,49 @@ Future improvements should focus more on the input representation, such as prese
 - Baseline reconstruction and training: Xiaoyi Xu
 - BEWO reconstruction and training: Junyi Zhan
 - Results analysis: Gavin Zhang
+
+## Reference
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+Alain, G., & Bengio, Y. (2016). Understanding intermediate layers using linear classifier probes. arXiv:1610.01644.
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+Gulati, A., Qin, J., Chiu, C.-C., Parmar, N., Zhang, Y., Yu, J., Han, W., Wang, S., Zhang, Z., Wu, Y., & Pang, R. (2020). Conformer: Convolution-augmented Transformer for speech recognition. Interspeech 2020, 5036-5040. https://doi.org/10.21437/Interspeech.2020-3015
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep residual learning for image recognition. CVPR 2016, 770-778.
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+Hyperparams.yaml - speechbrain/asr-conformersmall-transformerlm-librispeech at main. (2024, February 19). https://huggingface.co/speechbrain/asr-conformersmall-transformerlm-librispeech/blob/main/hyperparams.yaml
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+McFee, B., Raffel, C., Liang, D., et al. (2015). librosa: Audio and music signal analysis in Python. SciPy 2015, 18-24.
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+McInnes, L., Healy, J., & Melville, J. (2018). UMAP: Uniform Manifold Approximation and Projection for dimension reduction. arXiv:1802.03426.
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+Momtaz, S., Williams, B. T., Miller, M. K., Bologna, W. J., Koerner, T. K., Lelo de Larrea-Mancera, E. S., ... & Stecker, G. C. (2025). Effects of reverberation and binaural sensitivity on spatial release from masking. The Journal of the Acoustical Society of America, 158(4), 3592-3604.
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+Scheibler, R., Bezzam, E., & Dokmanic, I. (2018). Pyroomacoustics: A Python package for audio room simulation and array processing algorithms. ICASSP 2018, 351-355.
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+Sun, P., Cheng, S., Li, X., et al. (2025). Both Ears Wide Open: Towards language-driven spatial audio generation. ICLR 2025. arXiv:2410.10676.
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+Tan, J. K. A. (2023). Binaural recording methods with analysis on inter-aural time, level, and phase differences. arXiv preprint arXiv:2312.16884.
+</div>
+
+<div style="padding-left: 2em; text-indent: -2em; margin-bottom: 0.8em;">
+torchaudio.models.conformer - Torchaudio 2.10.0 documentation. (n.d.). Retrieved May 5, 2026, from https://docs.pytorch.org/audio/stable/_modules/torchaudio/models/conformer.html
+</div>
